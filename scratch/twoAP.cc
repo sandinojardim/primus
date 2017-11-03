@@ -141,16 +141,16 @@ int main (int argc, char **argv)
   wifi.SetRemoteStationManager ("ns3::AarfWifiManager");
 
   WifiMacHelper mac;
-  Ssid ssid = Ssid ("ns-3-ssid");
+  //Ssid ssid = Ssid ("ns-3-ssid");
   mac.SetType ("ns3::StaWifiMac",
-               "Ssid", SsidValue (ssid),
+               /*"Ssid", SsidValue (ssid),*/
                "ActiveProbing", BooleanValue (false));
 
   NetDeviceContainer staDevices;
   staDevices = wifi.Install (phy, mac, wifinodes);
 
-  mac.SetType ("ns3::ApWifiMac",
-                            "Ssid", SsidValue (ssid));
+  mac.SetType ("ns3::ApWifiMac"/*,
+                            "Ssid", SsidValue (ssid)*/);
 
   NetDeviceContainer apDevices;
   apDevices = wifi.Install (phy, mac, aps);
@@ -160,8 +160,8 @@ int main (int argc, char **argv)
   mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
                                  "MinX", DoubleValue (0.0),
                                  "MinY", DoubleValue (0.0),
-                                 "DeltaX", DoubleValue (5.0),
-                                 "DeltaY", DoubleValue (10.0),
+                                 "DeltaX", DoubleValue (100.0),
+                                 "DeltaY", DoubleValue (100.0),
                                  "GridWidth", UintegerValue (3),
                                  "LayoutType", StringValue ("RowFirst"));
 
@@ -173,9 +173,38 @@ int main (int argc, char **argv)
   mobility.Install (aps);
   mobility.Install (iotgw);
 
+  //Alterando a posição fixa do iotgw
+  Ptr<MobilityModel> mobi = iotgw->GetObject<MobilityModel> ();
+  Vector pos = mobi->GetPosition();
+  pos.x = 201.0;
+  pos.y = 1.0;
+  mobi->SetPosition(pos);
+
+
   internetNodes.Install (wifinodes);
 
+/*Imprimir posições
+  for (NodeContainer::Iterator j = aps.Begin ();
+       j != aps.End (); ++j)
+    {
+      Ptr<Node> object = *j;
+      Ptr<MobilityModel> position = object->GetObject<MobilityModel> ();
+      NS_ASSERT (position != 0);
+      Vector pos = position->GetPosition ();
+      std::cout << "x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
+    }
 
+
+  for (NodeContainer::Iterator j = wifinodes.Begin ();
+       j != wifinodes.End (); ++j)
+    {
+      Ptr<Node> object = *j;
+      Ptr<MobilityModel> position = object->GetObject<MobilityModel> ();
+      NS_ASSERT (position != 0);
+      Vector pos = position->GetPosition ();
+      std::cout << "x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
+    }
+*/
 
   ipv4.SetBase (Ipv4Address ("10.1.5.0"), Ipv4Mask ("255.255.255.0"));
   ipv4.Assign (apDevices.Get(0));
@@ -208,14 +237,14 @@ int main (int argc, char **argv)
   NS_LOG_INFO ("Create Web Application.");
   uint16_t port = 4000;
   UdpServerHelper serverWeb (port);
-  ApplicationContainer apps = serverWeb.Install (d);
+  ApplicationContainer apps = serverWeb.Install (webusr);
   apps.Start (Seconds (1.0));
   apps.Stop (Seconds (100.0));
 
   uint32_t MaxPacketSize = 1024;
   Time interPacketInterval = Seconds (0.008); //0.008 = 1Mbps
   uint32_t maxPacketCount = 1000000;
-  UdpClientHelper clientWeb (iic6.GetAddress(0), port);
+  UdpClientHelper clientWeb (stas.GetAddress(1), port);
   clientWeb.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
   clientWeb.SetAttribute ("Interval", TimeValue (interPacketInterval));
   clientWeb.SetAttribute ("PacketSize", UintegerValue (MaxPacketSize));
